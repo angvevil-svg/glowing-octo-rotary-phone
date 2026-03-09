@@ -1,56 +1,340 @@
 <!DOCTYPE html>
-<html>
-<head><title>Your OpenRouter Web AI</title></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crypto Trading Dashboard - Admin Panel</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+      color: white; min-height: 100vh;
+    }
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    
+    /* Header */
+    .header { 
+      display: flex; justify-content: space-between; align-items: center; 
+      background: rgba(255,255,255,0.05); backdrop-filter: blur(20px);
+      padding: 20px 30px; border-radius: 20px; margin-bottom: 30px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .logo { font-size: 28px; font-weight: bold; background: linear-gradient(45deg, #f7931a, #ffed4e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    
+    /* Navigation */
+    .nav { display: flex; gap: 10px; }
+    .nav-btn { padding: 10px 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 25px; color: white; text-decoration: none; transition: all 0.3s; }
+    .nav-btn.active, .nav-btn:hover { background: linear-gradient(45deg, #f7931a, #ffed4e); transform: translateY(-2px); }
+    
+    /* Main Content */
+    .main-content { display: none; }
+    .main-content.active { display: block; }
+    
+    /* Dashboard */
+    .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; margin-bottom: 30px; }
+    .card { background: rgba(255,255,255,0.05); backdrop-filter: blur(20px); border-radius: 20px; padding: 25px; border: 1px solid rgba(255,255,255,0.1); }
+    .card h3 { margin-bottom: 20px; color: #f7931a; }
+    
+    /* Stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .stat-card { text-align: center; padding: 20px; border-radius: 15px; }
+    .stat-value { font-size: 32px; font-weight: bold; margin-bottom: 5px; }
+    .stat-up { color: #22c55e; }
+    .stat-down { color: #ef4444; }
+    
+    /* Charts */
+    .chart-container { height: 400px; }
+    
+    /* Trading Panel */
+    .trading-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    select, input { width: 100%; padding: 12px; border-radius: 10px; border: none; background: rgba(255,255,255,0.1); color: white; margin-bottom: 10px; }
+    
+    /* Admin Panel */
+    .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .user-table, .trade-table { max-height: 400px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    th { background: rgba(247, 147, 26, 0.2); }
+    
+    /* Buttons */
+    .btn { padding: 12px 24px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: all 0.3s; margin: 5px; }
+    .btn-success { background: linear-gradient(45deg, #22c55e, #4ade80); color: white; }
+    .btn-danger { background: linear-gradient(45deg, #ef4444, #f87171); color: white; }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+    
+    /* Responsive */
+    @media (max-width: 768px) { 
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .trading-panel { grid-template-columns: 1fr; }
+      .admin-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
 <body>
-  <h2>Web AI Chat (Powered by OpenRouter)</h2>
-  <input id="prompt" placeholder="Ask anything..." style="width:400px; padding:10px;">
-  <button onclick="sendMessage()">Send</button>
-  <div id="response" style="margin-top:20px; padding:10px; border:1px solid #ccc; min-height:100px;"></div>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">₿ CryptoTrade Pro</div>
+      <div class="nav">
+        <a href="#" class="nav-btn active" onclick="showSection('dashboard')">Dashboard</a>
+        <a href="#" class="nav-btn" onclick="showSection('trading')">Trading</a>
+        <a href="#" class="nav-btn" onclick="showSection('admin')">Admin</a>
+      </div>
+    </div>
+
+    <!-- Dashboard Section -->
+    <div id="dashboard" class="main-content active">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value stat-up" id="totalVolume">$2.4M</div>
+          <div>24h Volume</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value stat-up" id="totalUsers">12,450</div>
+          <div>Total Users</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value stat-up" id="totalTrades">45,230</div>
+          <div>Total Trades</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value stat-down" id="platformFee">$18,420</div>
+          <div>Platform Fee</div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="card">
+          <h3>Market Overview</h3>
+          <canvas id="marketChart" class="chart-container"></canvas>
+        </div>
+        <div class="card">
+          <h3>Top Traders</h3>
+          <div id="topTraders"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trading Section -->
+    <div id="trading" class="main-content">
+      <div class="trading-panel">
+        <div class="card">
+          <h3>Quick Trade</h3>
+          <select id="tradePair">
+            <option>BTC/USDT</option>
+            <option>ETH/USDT</option>
+            <option>BNB/USDT</option>
+          </select>
+          <input type="number" id="tradeAmount" placeholder="Amount">
+          <input type="number" id="tradePrice" placeholder="Price">
+          <button class="btn btn-success" onclick="placeOrder('buy')">Buy</button>
+          <button class="btn btn-danger" onclick="placeOrder('sell')">Sell</button>
+        </div>
+        <div class="card">
+          <h3>Order Book</h3>
+          <div id="orderBook" style="height: 300px; overflow-y: auto;"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Open Orders</h3>
+        <div id="openOrders"></div>
+      </div>
+    </div>
+
+    <!-- Admin Section -->
+    <div id="admin" class="main-content">
+      <div class="admin-grid">
+        <div class="card">
+          <h3>Users Management</h3>
+          <div class="user-table">
+            <table>
+              <thead>
+                <tr><th>ID</th><th>Name</th><th>Email</th><th>Balance</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="usersTable"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Recent Trades</h3>
+          <div class="trade-table">
+            <table>
+              <thead>
+                <tr><th>Pair</th><th>Side</th><th>Amount</th><th>Price</th><th>Time</th></tr>
+              </thead>
+              <tbody id="tradesTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Platform Settings</h3>
+        <div>
+          <label>Trading Fee (%): <input type="number" id="tradingFee" value="0.1" step="0.01"></label>
+          <label>Max Leverage: <input type="number" id="maxLeverage" value="10"></label>
+          <button class="btn btn-success" onclick="saveSettings()">Save Settings</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
-    const API_KEY = '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';
-    const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-
-    async function sendMessage() {
-      const input = document.getElementById('prompt');
-      const output = document.getElementById('response');
-      if (!input.value.trim()) return;
-
-      output.innerHTML = 'Thinking...';
-      const messages = [{ role: 'user', content: input.value }];
-
-      try {
-        const response = await fetch(API_URL, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${API_KEY}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': window.location.href,
-            'X-Title': 'Web AI Demo'  // Optional leaderboard credit
-          },
-          body: JSON.stringify({
-            model: 'openai/gpt-4o-mini',  // Cheap/fast model
-            messages: messages,
-            temperature: 0.7
-          })
-        });
-
-        if (!response.ok) throw new Error(`API error: ${response.status}`);
-
-        const data = await response.json();
-        output.innerHTML = data.choices[0].message.content;
-      } catch (error) {
-        output.innerHTML = `Error: ${error.message}. Check console for details.`;
-        console.error(error);
-      }
-
-      input.value = '';
+    // Simulated data
+    let marketData = { btc: 45230, eth: 2890, bnb: 420 };
+    let users = [];
+    let trades = [];
+    let orders = [];
+    
+    // Initialize
+    let marketChart;
+    
+    function init() {
+      generateMockData();
+      initChart();
+      updateDashboard();
+      setInterval(updateMarket, 3000);
     }
-
-    // Enter key support
-    document.getElementById('prompt').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendMessage();
-    });
+    
+    function generateMockData() {
+      // Generate users
+      for(let i = 1; i <= 50; i++) {
+        users.push({
+          id: i,
+          name: `User${i}`,
+          email: `user${i}@crypto.com`,
+          balance: (Math.random() * 10000 + 100).toFixed(2)
+        });
+      }
+      
+      // Generate trades
+      const pairs = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT'];
+      for(let i = 0; i < 100; i++) {
+        trades.push({
+          pair: pairs[Math.floor(Math.random() * pairs.length)],
+          side: Math.random() > 0.5 ? 'BUY' : 'SELL',
+          amount: (Math.random() * 10 + 0.1).toFixed(4),
+          price: (Math.random() * 1000 + 100).toFixed(2),
+          time: new Date(Date.now() - Math.random() * 86400000).toLocaleString()
+        });
+      }
+    }
+    
+    function initChart() {
+      const ctx = document.getElementById('marketChart').getContext('2d');
+      marketChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: Array(24).fill().map((_, i) => `${i}h`),
+          datasets: [{
+            label: 'BTC/USDT',
+            data: Array(24).fill().map(() => Math.random() * 50000 + 40000),
+            borderColor: '#f7931a',
+            backgroundColor: 'rgba(247, 147, 26, 0.1)',
+            tension: 0.4
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } } }
+      });
+    }
+    
+    function updateMarket() {
+      // Simulate price changes
+      Object.keys(marketData).forEach(coin => {
+        const change = (Math.random() - 0.5) * 0.05;
+        marketData[coin] = marketData[coin] * (1 + change);
+      });
+      updateDashboard();
+      if(marketChart) marketChart.update();
+    }
+    
+    function showSection(section) {
+      document.querySelectorAll('.main-content').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(section).classList.add('active');
+      event.target.classList.add('active');
+    }
+    
+    function updateDashboard() {
+      document.getElementById('totalVolume').textContent = `$${(Math.random()*3 + 2).toFixed(1)}M`;
+      document.getElementById('totalUsers').textContent = Math.floor(Math.random()*15000 + 12000).toLocaleString();
+      document.getElementById('totalTrades').textContent = Math.floor(Math.random()*50000 + 40000).toLocaleString();
+      document.getElementById('platformFee').textContent = `$${(Math.random()*20 + 15).toFixed(0)}K`;
+      
+      // Top traders
+      document.getElementById('topTraders').innerHTML = users.slice(0,5)
+        .sort((a,b) => b.balance - a.balance)
+        .map(u => `<div style="padding:10px;border-bottom:1px solid rgba(255,255,255,0.1);">${u.name}: $${u.balance}</div>`).join('');
+    }
+    
+    function placeOrder(type) {
+      const pair = document.getElementById('tradePair').value;
+      const amount = document.getElementById('tradeAmount').value;
+      const price = document.getElementById('tradePrice').value;
+      
+      if(!amount || !price) return alert('Please fill amount and price');
+      
+      const order = {
+        id: Date.now(),
+        pair, type: type.toUpperCase(), amount, price,
+        status: 'open', time: new Date().toLocaleString()
+      };
+      
+      orders.push(order);
+      updateOrderBook();
+      alert(`${type.toUpperCase()} order placed: ${amount} ${pair} @ $${price}`);
+      document.getElementById('tradeAmount').value = '';
+      document.getElementById('tradePrice').value = '';
+    }
+    
+    function updateOrderBook() {
+      const openOrdersEl = document.getElementById('openOrders');
+      openOrdersEl.innerHTML = orders.slice(-5).map(o => 
+        `<div style="padding:10px;background:rgba(255,255,255,0.05);margin:5px 0;border-radius:8px;">
+          ${o.pair} ${o.type} ${o.amount} @ $${o.price} 
+          <span style="float:right;">${o.status}</span>
+        </div>`
+      ).join('') || '<div>No open orders</div>';
+    }
+    
+    function saveSettings() {
+      const fee = document.getElementById('tradingFee').value;
+      const leverage = document.getElementById('maxLeverage').value;
+      alert(`Settings saved: Fee=${fee}%, Leverage=${leverage}x`);
+    }
+    
+    // Update tables
+    setInterval(() => {
+      if(document.getElementById('admin').classList.contains('active')) {
+        document.getElementById('usersTable').innerHTML = users.slice(0,10)
+          .sort((a,b) => b.balance - a.balance)
+          .map(u => `<tr>
+            <td>${u.id}</td>
+            <td>${u.name}</td>
+            <td>${u.email}</td>
+            <td>$${u.balance}</td>
+            <td><button class="btn btn-danger" onclick="deleteUser(${u.id})">Delete</button></td>
+          </tr>`).join('');
+          
+        document.getElementById('tradesTable').innerHTML = trades.slice(-10).reverse()
+          .map(t => `<tr>
+            <td>${t.pair}</td>
+            <td style="color:${t.side==='BUY'?'#22c55e':'#ef4444'}">${t.side}</td>
+            <td>${t.amount}</td>
+            <td>$${t.price}</td>
+            <td>${t.time}</td>
+          </tr>`).join('');
+      }
+    }, 2000);
+    
+    function deleteUser(id) {
+      users = users.filter(u => u.id !== id);
+      alert(`User ${id} deleted`);
+    }
+    
+    // Start
+    init();
   </script>
 </body>
-</html>
+  </html>
