@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head><title>Your OpenRouter Web AI</title></head>
+<body>
+  <h2>Web AI Chat (Powered by OpenRouter)</h2>
+  <input id="prompt" placeholder="Ask anything..." style="width:400px; padding:10px;">
+  <button onclick="sendMessage()">Send</button>
+  <div id="response" style="margin-top:20px; padding:10px; border:1px solid #ccc; min-height:100px;"></div>
+
+  <script>
+    const API_KEY = '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';
+    const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
+    async function sendMessage() {
+      const input = document.getElementById('prompt');
+      const output = document.getElementById('response');
+      if (!input.value.trim()) return;
+
+      output.innerHTML = 'Thinking...';
+      const messages = [{ role: 'user', content: input.value }];
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': window.location.href,
+            'X-Title': 'Web AI Demo'  // Optional leaderboard credit
+          },
+          body: JSON.stringify({
+            model: 'openai/gpt-4o-mini',  // Cheap/fast model
+            messages: messages,
+            temperature: 0.7
+          })
+        });
+
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+        const data = await response.json();
+        output.innerHTML = data.choices[0].message.content;
+      } catch (error) {
+        output.innerHTML = `Error: ${error.message}. Check console for details.`;
+        console.error(error);
+      }
+
+      input.value = '';
+    }
+
+    // Enter key support
+    document.getElementById('prompt').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  </script>
+</body>
+</html>
